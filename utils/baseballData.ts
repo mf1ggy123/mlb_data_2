@@ -325,6 +325,7 @@ interface QualityThresholds {
   neutralMin: number;
   neutralMax: number;
   goodMin: number;
+  goodMax: number;
   veryGoodMin: number;
 }
 
@@ -343,6 +344,7 @@ function calculateQualityThresholds(outcomes: PlayOutcome[], startBases?: BaseSt
       neutralMin: -0.4,
       neutralMax: 0.6,
       goodMin: 0.2,
+      goodMax: 0.6,
       veryGoodMin: 0.7
     };
   }

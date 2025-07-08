@@ -21,7 +21,9 @@
       "Bash(curl:*)",
       "WebFetch(domain:github.com)",
       "Bash(grep:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }
