@@ -103,21 +103,18 @@ export class PolymarketClobManager {
         side: params.side
       });
 
-      // Create and post order with FOK (Fill-or-Kill)
-      const orderResponse = await this.client.createAndPostOrder(
-        {
-          tokenID: params.tokenID,
-          price: params.price,
-          side: params.side,
-          size: params.size,
-          feeRateBps: 0, // 0 basis points fee
-        },
-        {
-          tickSize: "0.01", // Standard tick size
-          negRisk: false     // Standard for most markets
-        },
-        OrderType.GTD // Fill-or-Kill as requested
-      );
+      // Try simpler order creation without market options first
+      console.log(`🔧 Attempting simplified order creation...`);
+      
+      const orderResponse = await this.client.createOrder({
+        tokenID: params.tokenID,
+        price: params.price,
+        side: params.side,
+        size: params.size,
+        feeRateBps: 0,
+        nonce: Date.now(),
+        expiration: Math.floor(Date.now() / 1000) + 86400 // 24 hours from now
+      });
 
       console.log(`✅ Order created successfully:`, orderResponse);
 
