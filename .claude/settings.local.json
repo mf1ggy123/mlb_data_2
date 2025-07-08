@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm run test-api:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm run dev:*)",
+      "Bash(lsof:*)",
+      "Bash(kill:*)",
+      "Bash(node:*)",
+      "Bash(ls:*)",
+      "Bash(export HOME=\"/Users/michaelbonfiglio\")",
+      "Bash(zsh -c:*)",
+      "Bash(exec zsh)",
+      "Bash(env PATH=\"/usr/local/bin:/usr/bin:/bin\" cd \"/Users/michaelbonfiglio/Desktop/untitled folder 4\")",
+      "Bash(bash -c 'export PATH=\"/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin\" && cd \"/Users/michaelbonfiglio/Desktop/untitled folder 4\" && npm run dev')",
+      "Bash(python3:*)",
+      "WebFetch(domain:docs.polymarket.com)",
+      "Bash(rm:*)",
+      "Bash(npm install:*)",
+      "Bash(curl:*)",
+      "WebFetch(domain:github.com)"
+    ],
+    "deny": []
+  }
+}
