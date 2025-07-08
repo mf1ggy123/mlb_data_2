@@ -825,7 +825,7 @@ export default function GameControls() {
               {getBasePathOptionsByQuality(basePathQuality, gameState).map((option) => (
                 <button
                   key={option.id}
-                  onClick={() => handleStealSelect(option)}
+                  onClick={() => handlePlaySelect(option)}
                   className={`w-full text-left p-4 rounded-lg border-2 transition-colors text-lg ${
                     option.category === 'hit' ? 'border-green-300 bg-green-50 hover:bg-green-100' :
                     option.category === 'out' ? 'border-red-300 bg-red-50 hover:bg-red-100' :
