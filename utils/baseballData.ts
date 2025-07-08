@@ -327,6 +327,7 @@ interface QualityThresholds {
   goodMin: number;
   goodMax: number;
   veryGoodMin: number;
+  veryGoodMax: number;
 }
 
 // Calculate quality thresholds for a specific base state using outcome-based logic
@@ -345,7 +346,8 @@ function calculateQualityThresholds(outcomes: PlayOutcome[], startBases?: BaseSt
       neutralMax: 0.6,
       goodMin: 0.2,
       goodMax: 0.6,
-      veryGoodMin: 0.7
+      veryGoodMin: 0.7,
+      veryGoodMax: 1.0
     };
   }
   
