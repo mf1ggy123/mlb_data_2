@@ -38,7 +38,11 @@ export class PolymarketClobManager {
     // Create wallet using ethers Wallet
     this.wallet = new Wallet(privateKey);
     
-    console.log(`🔐 Polymarket CLOB Manager initialized for: ${this.wallet.address}`);
+    console.log(`🔐 Polymarket CLOB Manager initialized`);
+    console.log(`📍 Wallet address: ${this.wallet.address}`);
+    console.log(`📍 Private key configured: ${privateKey.substring(0, 10)}...`);
+    console.log(`📍 Chain ID: ${this.chainId}`);
+    console.log(`📍 Host: ${this.host}`);
   }
 
   // Initialize the CLOB client following official documentation EXACTLY
@@ -50,9 +54,11 @@ export class PolymarketClobManager {
     try {
       console.log(`🔄 Initializing CLOB client following official pattern...`);
 
-      // Follow Polymarket's exact pattern
-      const funder = '0xB013EdC43a9Cd9fe94B893551e4733d8CdbEe053'; // Your Polymarket Profile Address
+      // Follow Polymarket's exact pattern - use the wallet address that matches the private key
+      const funder = this.wallet.address; // Use the address derived from the private key
       console.log(`📡 Creating or deriving API key...`);
+      console.log(`📍 Funder address: ${funder}`);
+      console.log(`📍 Signer address: ${this.wallet.address}`);
       
       // In general don't create a new API key, always derive or createOrDerive
       const creds = new ClobClient(this.host, this.chainId, this.wallet).createOrDeriveApiKey();
