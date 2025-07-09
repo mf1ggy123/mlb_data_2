@@ -51,20 +51,21 @@ export class PolymarketClobManager {
       console.log(`🔄 Initializing CLOB client following official pattern...`);
 
       // Follow Polymarket's exact pattern
-      const funder = '0xB013EdC43a9Cd9fe94B893551e4733d8CdbEe053'; // Your actual Polymarket funder address
+      const funder = '0xB013EdC43a9Cd9fe94B893551e4733d8CdbEe053'; // Your Polymarket Profile Address
       console.log(`📡 Creating or deriving API key...`);
       
-      const creds = await new ClobClient(this.host, this.chainId, this.wallet).createOrDeriveApiKey();
-      console.log(`✅ API credentials obtained`);
+      // In general don't create a new API key, always derive or createOrDerive
+      const creds = new ClobClient(this.host, this.chainId, this.wallet).createOrDeriveApiKey();
+      console.log(`✅ API credentials creation started`);
 
-      // Use signature type 1 (Magic/Email Login equivalent for private key)
+      // Use signature type 1 (Magic/Email Login equivalent for private key)  
       const signatureType = 1;
       
       this.client = new ClobClient(
         this.host, 
         this.chainId, 
         this.wallet, 
-        creds, 
+        await creds,  // await the credentials like in their example
         signatureType, 
         funder
       );
