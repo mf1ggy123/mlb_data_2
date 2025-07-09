@@ -53,57 +53,37 @@ export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
         console.warn(`⚠️ Unable to fetch prices for market`);
       }
       
-      // Authenticate with Polymarket L2 after successful market discovery
-      console.log(`🔐 Authenticating with Polymarket L2...`);
-      try {
-        const authResponse = await fetch('/api/polymarket/auth', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
+      // Create buy order for home team (CLOB client handles authentication internally)
+      if (market.homeTokenId) {
+        console.log(`🏠 Creating buy order for home team: ${homeTeam.toUpperCase()}`);
+        setAuthStatus('success'); // CLOB client handles auth internally
         
-        const authData = await authResponse.json();
-        
-        if (authData.success) {
-          console.log(`✅ L2 Authentication successful for wallet: ${authData.walletAddress}`);
-          setAuthStatus('success');
+        try {
+          const orderResponse = await fetch('/api/polymarket/orders/home-team-fok', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tokenID: market.homeTokenId,
+              price: prices.homePrices?.buyPrice ? parseFloat(prices.homePrices.buyPrice) : 0.5 // Default to 50¢ if no price
+            })
+          });
           
-          // Create buy order for home team immediately after successful authentication
-          if (market.homeTokenId) {
-            console.log(`🏠 Creating buy order for home team: ${homeTeam.toUpperCase()}`);
-            try {
-              const orderResponse = await fetch('/api/polymarket/orders/home-team-fok', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  tokenID: market.homeTokenId,
-                  price: prices.homePrices?.buyPrice ? parseFloat(prices.homePrices.buyPrice) : 0.5 // Default to 50¢ if no price
-                })
-              });
-              
-              const orderData = await orderResponse.json();
-              
-              if (orderData.success) {
-                console.log(`✅ Home team buy order created successfully:`, orderData);
-                console.log(`📋 Order ID: ${orderData.orderId}`);
-                console.log(`💰 Order Price: ${orderData.orderDetails?.priceFormatted || 'N/A'}`);
-                console.log(`📊 Order Size: ${orderData.orderDetails?.size || 1} share(s)`);
-                setOrderStatus('success');
-              } else {
-                console.error(`❌ Home team buy order creation failed:`, orderData.error);
-                setOrderStatus('failed');
-              }
-            } catch (orderError) {
-              console.error(`❌ Order creation request failed:`, orderError);
-              setOrderStatus('failed');
-            }
+          const orderData = await orderResponse.json();
+          
+          if (orderData.success) {
+            console.log(`✅ Home team buy order created successfully:`, orderData);
+            console.log(`📋 Order ID: ${orderData.orderId}`);
+            console.log(`💰 Order Price: ${orderData.orderDetails?.priceFormatted || 'N/A'}`);
+            console.log(`📊 Order Size: ${orderData.orderDetails?.size || 1} share(s)`);
+            setOrderStatus('success');
+          } else {
+            console.error(`❌ Home team buy order creation failed:`, orderData.error);
+            setOrderStatus('failed');
           }
-        } else {
-          console.error(`❌ L2 Authentication failed:`, authData.error);
-          setAuthStatus('failed');
+        } catch (orderError) {
+          console.error(`❌ Order creation request failed:`, orderError);
+          setOrderStatus('failed');
         }
-      } catch (authError) {
-        console.error(`❌ Authentication request failed:`, authError);
-        setAuthStatus('failed');
       }
       
       onMarketFound(market, awayTeam, homeTeam, date);
@@ -241,13 +221,13 @@ export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
               {authStatus === 'success' && (
                 <p className="text-xs text-green-600 mt-2 flex items-center">
                   <span className="mr-1">🔐</span>
-                  L2 Authentication Ready
+                  CLOB Client Ready
                 </p>
               )}
               {authStatus === 'failed' && (
                 <p className="text-xs text-red-600 mt-2 flex items-center">
                   <span className="mr-1">🔐</span>
-                  L2 Authentication Failed
+                  CLOB Client Failed
                 </p>
               )}
               {orderStatus === 'success' && (

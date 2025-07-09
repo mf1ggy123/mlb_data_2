@@ -120,7 +120,7 @@ export class PolymarketClobManager {
 
       return {
         success: true,
-        orderId: orderResponse.orderID || orderResponse.id,
+        orderId: String(orderResponse.orderID || orderResponse.id || ''),
         details: orderResponse
       };
 
