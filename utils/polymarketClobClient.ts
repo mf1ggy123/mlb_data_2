@@ -50,29 +50,13 @@ export class PolymarketClobManager {
     try {
       console.log(`🔄 Initializing CLOB client...`);
 
-      // Step 1: Create or derive API credentials
-      const tempClient = new ClobClient(this.host, this.chainId, this.wallet);
-      console.log(`📡 Creating API credentials...`);
+      // Try basic client without API credentials first
+      console.log(`📡 Trying basic client initialization...`);
       
-      const creds = await tempClient.createOrDeriveApiKey();
-      console.log(`✅ API credentials created`);
-
-      // Step 2: Initialize the full client
-      // Using signature type 1 for private key authentication
-      const signatureType = 1;
-      const funder = this.wallet.address; // Use wallet address as funder
+      this.client = new ClobClient(this.host, this.chainId, this.wallet);
       
-      this.client = new ClobClient(
-        this.host,
-        this.chainId,
-        this.wallet,
-        creds,
-        signatureType,
-        funder
-      );
-
       this.initialized = true;
-      console.log(`✅ CLOB client initialized successfully`);
+      console.log(`✅ CLOB client initialized successfully (basic mode)`);
       
     } catch (error) {
       console.error('❌ Failed to initialize CLOB client:', error);
