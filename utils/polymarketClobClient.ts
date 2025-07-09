@@ -41,22 +41,36 @@ export class PolymarketClobManager {
     console.log(`🔐 Polymarket CLOB Manager initialized for: ${this.wallet.address}`);
   }
 
-  // Initialize the CLOB client following official documentation
+  // Initialize the CLOB client following official documentation EXACTLY
   async initialize(): Promise<void> {
     if (this.initialized) {
       return;
     }
 
     try {
-      console.log(`🔄 Initializing CLOB client...`);
+      console.log(`🔄 Initializing CLOB client following official pattern...`);
 
-      // Try basic client without API credentials first
-      console.log(`📡 Trying basic client initialization...`);
+      // Follow Polymarket's exact pattern
+      const funder = this.wallet.address; // Use wallet address as funder for now
+      console.log(`📡 Creating or deriving API key...`);
       
-      this.client = new ClobClient(this.host, this.chainId, this.wallet);
+      const creds = await new ClobClient(this.host, this.chainId, this.wallet).createOrDeriveApiKey();
+      console.log(`✅ API credentials obtained`);
+
+      // Use signature type 1 (Magic/Email Login equivalent for private key)
+      const signatureType = 1;
+      
+      this.client = new ClobClient(
+        this.host, 
+        this.chainId, 
+        this.wallet, 
+        creds, 
+        signatureType, 
+        funder
+      );
       
       this.initialized = true;
-      console.log(`✅ CLOB client initialized successfully (basic mode)`);
+      console.log(`✅ CLOB client initialized successfully (official pattern)`);
       
     } catch (error) {
       console.error('❌ Failed to initialize CLOB client:', error);
@@ -87,18 +101,23 @@ export class PolymarketClobManager {
         side: params.side
       });
 
-      // Try simpler order creation without market options first
-      console.log(`🔧 Attempting simplified order creation...`);
+      // Use Polymarket's official createAndPostOrder pattern
+      console.log(`🔧 Creating order using official createAndPostOrder pattern...`);
       
-      const orderResponse = await this.client.createOrder({
-        tokenID: params.tokenID,
-        price: params.price,
-        side: params.side,
-        size: params.size,
-        feeRateBps: 0,
-        nonce: Date.now(),
-        expiration: Math.floor(Date.now() / 1000) + 86400 // 24 hours from now
-      });
+      const orderResponse = await this.client.createAndPostOrder(
+        {
+          tokenID: params.tokenID,
+          price: params.price,
+          side: params.side,
+          size: params.size,
+          feeRateBps: 0,
+        },
+        { 
+          tickSize: "0.001", // Use Polymarket's example tickSize
+          negRisk: false 
+        },
+        OrderType.GTC // Use GTC like in their example
+      );
 
       console.log(`✅ Order created successfully:`, orderResponse);
 
