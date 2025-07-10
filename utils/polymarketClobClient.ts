@@ -148,7 +148,7 @@ export class PolymarketClobManager {
   async createHomeTeamBuyOrder(tokenID: string, price: number): Promise<OrderResponse> {
     console.log(`🏠 Creating FOK buy order for home team token: ${tokenID} at price: ${price}`);
     console.log(`🔍 Client initialized status: ${this.initialized}`);
-    console.log(`🔍 Client instance exists: ${!!this.client}`);
+    console.log(`🔍 Client instance exists: ${this.client}`);
     
     return this.createOrder({
       tokenID,
