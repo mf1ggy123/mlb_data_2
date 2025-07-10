@@ -28,7 +28,7 @@ export class PolymarketClobManager {
   constructor() {
     // Initialize with environment variables
     const privateKey = process.env.POLYMARKET_PRIVATE_KEY;
-    this.host = process.env.POLYMARKET_API_HOST || 'https://clob.polymarket.com';
+    this.host = 'https://clob.polymarket.com';
     this.chainId = parseInt(process.env.POLYMARKET_CHAIN_ID || '137');
 
     if (!privateKey) {
