@@ -25,7 +25,9 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(npm run build:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(/usr/local/bin/node:*)",
+      "Bash(npm ls:*)"
     ],
     "deny": []
   }

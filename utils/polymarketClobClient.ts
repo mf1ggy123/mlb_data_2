@@ -29,7 +29,7 @@ export class PolymarketClobManager {
     // Initialize with environment variables
     const privateKey = process.env.POLYMARKET_PRIVATE_KEY;
     this.host = 'https://clob.polymarket.com';
-    this.chainId = parseInt(process.env.POLYMARKET_CHAIN_ID || '137');
+    this.chainId = 137;
 
     if (!privateKey) {
       throw new Error('POLYMARKET_PRIVATE_KEY environment variable is required');
@@ -55,27 +55,29 @@ export class PolymarketClobManager {
       console.log(`🔄 Initializing CLOB client following official pattern...`);
 
       // Follow Polymarket's exact pattern - use the wallet address that matches the private key
-      const funder = process.env.POLYMARKET_WALLET_ADDRESS; // Use the address derived from the private key
+      const funder = this.wallet.address; // Use the address derived from the private key
       console.log(`📡 Creating or deriving API key...`);
       console.log(`📍 Funder address: ${funder}`);
       console.log(`📍 Signer address: ${this.wallet.address}`);
       
-      // In general don't create a new API key, always derive or createOrDerive
-      const creds = new ClobClient(this.host, this.chainId, this.wallet).createOrDeriveApiKey();
-      console.log(`✅ API credentials creation started`);
+      // Create CLOB client first without credentials, then derive API key
+      console.log(`🔧 Creating initial CLOB client...`);
+      const tempClient = new ClobClient(this.host, this.chainId, this.wallet);
+      console.log(tempClient)
+      console.log(`🔑 Deriving API key for wallet: ${this.wallet.address}`);
+      const creds = await tempClient.createOrDeriveApiKey();
+      console.log(`✅ API credentials created:`, creds);
 
-      // Use signature type 1 (Magic/Email Login equivalent for private key)  
-      const signatureType = 1;
-
-      console.log('creds:', creds);
+      // Use signature type 2 (EOA signature for private key)
+      const signatureType = 0;
       
       this.client = new ClobClient(
         this.host, 
         this.chainId, 
         this.wallet, 
-        await creds,  // await the credentials like in their example
+        creds,  // use the awaited credentials
         signatureType, 
-        funder
+        this.wallet.address  // use wallet address as funder
       );
       
       this.initialized = true;
