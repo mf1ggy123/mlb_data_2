@@ -55,7 +55,7 @@ export class PolymarketClobManager {
       console.log(`🔄 Initializing CLOB client following official pattern...`);
 
       // Follow Polymarket's exact pattern - use the wallet address that matches the private key
-      const funder = this.wallet.address; // Use the address derived from the private key
+      const funder = process.env.POLYMARKET_WALLET_ADDRESS; // Use the address derived from the private key
       console.log(`📡 Creating or deriving API key...`);
       console.log(`📍 Funder address: ${funder}`);
       console.log(`📍 Signer address: ${this.wallet.address}`);
