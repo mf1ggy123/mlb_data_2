@@ -65,7 +65,7 @@ export class PolymarketClobManager {
       console.log(`✅ API credentials creation started`);
 
       // Use signature type 1 (Magic/Email Login equivalent for private key)  
-      const signatureType = 2;
+      const signatureType = 1;
 
       console.log('creds:', creds);
       
