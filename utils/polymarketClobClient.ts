@@ -66,6 +66,8 @@ export class PolymarketClobManager {
 
       // Use signature type 1 (Magic/Email Login equivalent for private key)  
       const signatureType = 2;
+
+      console.log('creds:', creds);
       
       this.client = new ClobClient(
         this.host, 
