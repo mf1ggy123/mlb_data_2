@@ -122,7 +122,7 @@ export class PolymarketClobManager {
           feeRateBps: 0,
         },
         { 
-          tickSize: "0.001", // Use Polymarket's example tickSize
+          tickSize: "0.01", // Use Polymarket's example tickSize
           negRisk: false 
         },
         OrderType.GTC // Use GTC like in their example
