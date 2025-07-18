@@ -106,6 +106,34 @@ export class PolymarketClobManager {
         throw new Error('CLOB client not initialized');
       }
 
+      // Debug: Check available methods on the client
+      console.log(`🔍 CLOB Client methods:`, Object.getOwnPropertyNames(Object.getPrototypeOf(this.client)));
+      console.log(`🔍 CLOB Client has setAllowances:`, typeof this.client.setAllowances === 'function');
+      console.log(`🔍 CLOB Client has getBalance:`, typeof this.client.getBalance === 'function');
+
+      // Check current balance
+      try {
+        console.log(`💰 Checking current balance...`);
+        const balance = await this.client.getBalance();
+        console.log(`📊 Current balance:`, balance);
+      } catch (balanceError) {
+        console.log(`⚠️ Could not get balance:`, balanceError);
+      }
+
+      // Try to set up allowances before creating order
+      try {
+        console.log(`🔧 Setting up allowances...`);
+        if (typeof this.client.setAllowances === 'function') {
+          await this.client.setAllowances();
+          console.log(`✅ Allowances set successfully`);
+        } else {
+          console.log(`⚠️ setAllowances method not available on client`);
+        }
+      } catch (allowanceError) {
+        console.log(`⚠️ Failed to set allowances:`, allowanceError);
+        // Continue anyway - maybe allowances are already set
+      }
+
       console.log(`📋 Creating ${params.side} order:`, {
         tokenID: params.tokenID,
         price: params.price,
