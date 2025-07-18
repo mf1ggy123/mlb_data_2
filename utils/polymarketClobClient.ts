@@ -109,7 +109,7 @@ export class PolymarketClobManager {
       // Check current balance and allowances
       try {
         console.log(`💰 Checking current balance and allowances...`);
-        const balanceAllowance = await (this.client as any).getBalanceAllowance();
+        const balanceAllowance = await this.client.getBalanceAllowance();
         console.log(`📊 Current balance and allowance:`, balanceAllowance);
       } catch (balanceError) {
         console.log(`⚠️ Could not get balance/allowance:`, balanceError);
@@ -118,12 +118,12 @@ export class PolymarketClobManager {
       // Try to update balance and allowances before creating order
       try {
         console.log(`🔧 Updating balance and allowances...`);
-        await (this.client as any).updateBalanceAllowance();
+        await this.client.updateBalanceAllowance();
         console.log(`✅ Balance and allowances updated successfully`);
         
         // Check again after update
         try {
-          const updatedBalanceAllowance = await (this.client as any).getBalanceAllowance();
+          const updatedBalanceAllowance = await this.client.getBalanceAllowance();
           console.log(`📊 Updated balance and allowance:`, updatedBalanceAllowance);
         } catch (checkError) {
           console.log(`⚠️ Could not check updated balance:`, checkError);
@@ -255,7 +255,7 @@ export class PolymarketClobManager {
       
       // Update balance and allowances for USDC and conditional tokens
       // This is required for EOA wallets to trade
-      await (this.client as any).updateBalanceAllowance();
+      await this.client.updateBalanceAllowance();
       
       console.log(`✅ Allowances set successfully`);
       
@@ -277,7 +277,7 @@ export class PolymarketClobManager {
       console.log(`💰 Checking balances for wallet: ${this.wallet.address}`);
       
       // Get balance and allowance information
-      const balances = await (this.client as any).getBalanceAllowance();
+      const balances = await this.client.getBalanceAllowance();
       console.log(`📊 Current balances and allowances:`, balances);
       
       return balances;
