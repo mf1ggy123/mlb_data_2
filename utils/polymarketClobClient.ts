@@ -1,7 +1,7 @@
 // Polymarket CLOB Client - Following Official Documentation
 // https://docs.polymarket.com/developers/CLOB/clients
 
-import { ApiKeyCreds, ClobClient, OrderType, Side } from "@polymarket/clob-client";
+import { ApiKeyCreds, ClobClient, OrderType, Side, BalanceAllowanceParams, AssetType } from "@polymarket/clob-client";
 import { Wallet } from "@ethersproject/wallet";
 
 export interface CreateOrderParams {
@@ -69,8 +69,8 @@ export class PolymarketClobManager {
       const creds = await tempClient.createOrDeriveApiKey();
       console.log(`✅ API credentials created:`, creds);
 
-      // Use signature type 2 (EOA signature for private key)
-      const signatureType = 2;
+      // Use signature type 1 (Magic/Email Login equivalent for private key)
+      const signatureType = 1;
       
       this.client = new ClobClient(
         this.host, 
@@ -106,10 +106,14 @@ export class PolymarketClobManager {
         throw new Error('CLOB client not initialized');
       }
 
-      // Check current balance and allowances
+      // Check current balance and allowances for this specific token
       try {
-        console.log(`💰 Checking current balance and allowances...`);
-        const balanceAllowance = await this.client.getBalanceAllowance();
+        console.log(`💰 Checking current balance and allowances for token: ${params.tokenID}...`);
+        const balanceAllowanceParams = {
+          asset_type: AssetType.CONDITIONAL,
+          token_id: params.tokenID
+        };
+        const balanceAllowance = await this.client.getBalanceAllowance(balanceAllowanceParams);
         console.log(`📊 Current balance and allowance:`, balanceAllowance);
       } catch (balanceError) {
         console.log(`⚠️ Could not get balance/allowance:`, balanceError);
@@ -117,13 +121,17 @@ export class PolymarketClobManager {
 
       // Try to update balance and allowances before creating order
       try {
-        console.log(`🔧 Updating balance and allowances...`);
-        await this.client.updateBalanceAllowance();
-        console.log(`✅ Balance and allowances updated successfully`);
+        console.log(`🔧 Updating balance and allowances for token: ${params.tokenID}...`);
+        const balanceAllowanceParams = {
+          asset_type: AssetType.CONDITIONAL,
+          token_id: params.tokenID
+        };
+        await this.client.updateBalanceAllowance(balanceAllowanceParams);
+        console.log(`✅ Balance and allowances updated successfully for token: ${params.tokenID}`);
         
         // Check again after update
         try {
-          const updatedBalanceAllowance = await this.client.getBalanceAllowance();
+          const updatedBalanceAllowance = await this.client.getBalanceAllowance(balanceAllowanceParams);
           console.log(`📊 Updated balance and allowance:`, updatedBalanceAllowance);
         } catch (checkError) {
           console.log(`⚠️ Could not check updated balance:`, checkError);
@@ -255,7 +263,9 @@ export class PolymarketClobManager {
       
       // Update balance and allowances for USDC and conditional tokens
       // This is required for EOA wallets to trade
-      await this.client.updateBalanceAllowance();
+      await this.client.updateBalanceAllowance({
+        asset_type: AssetType.COLLATERAL
+      });
       
       console.log(`✅ Allowances set successfully`);
       
@@ -277,7 +287,9 @@ export class PolymarketClobManager {
       console.log(`💰 Checking balances for wallet: ${this.wallet.address}`);
       
       // Get balance and allowance information
-      const balances = await this.client.getBalanceAllowance();
+      const balances = await this.client.getBalanceAllowance({
+        asset_type: AssetType.COLLATERAL
+      });
       console.log(`📊 Current balances and allowances:`, balances);
       
       return balances;
