@@ -110,7 +110,7 @@ export class PolymarketClobManager {
       try {
         console.log(`💰 Checking current balance and allowances for token: ${params.tokenID}...`);
         const balanceAllowanceParams = {
-          asset_type: AssetType.CONDITIONAL,
+          asset_type: AssetType.COLLATERAL,
           token_id: params.tokenID
         };
         const balanceAllowance = await this.client.getBalanceAllowance(balanceAllowanceParams);
