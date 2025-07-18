@@ -106,31 +106,30 @@ export class PolymarketClobManager {
         throw new Error('CLOB client not initialized');
       }
 
-      // Debug: Check available methods on the client
-      console.log(`🔍 CLOB Client methods:`, Object.getOwnPropertyNames(Object.getPrototypeOf(this.client)));
-      console.log(`🔍 CLOB Client has setAllowances:`, typeof this.client.setAllowances === 'function');
-      console.log(`🔍 CLOB Client has getBalance:`, typeof this.client.getBalance === 'function');
-
-      // Check current balance
+      // Check current balance and allowances
       try {
-        console.log(`💰 Checking current balance...`);
-        const balance = await this.client.getBalance();
-        console.log(`📊 Current balance:`, balance);
+        console.log(`💰 Checking current balance and allowances...`);
+        const balanceAllowance = await (this.client as any).getBalanceAllowance();
+        console.log(`📊 Current balance and allowance:`, balanceAllowance);
       } catch (balanceError) {
-        console.log(`⚠️ Could not get balance:`, balanceError);
+        console.log(`⚠️ Could not get balance/allowance:`, balanceError);
       }
 
-      // Try to set up allowances before creating order
+      // Try to update balance and allowances before creating order
       try {
-        console.log(`🔧 Setting up allowances...`);
-        if (typeof this.client.setAllowances === 'function') {
-          await this.client.setAllowances();
-          console.log(`✅ Allowances set successfully`);
-        } else {
-          console.log(`⚠️ setAllowances method not available on client`);
+        console.log(`🔧 Updating balance and allowances...`);
+        await (this.client as any).updateBalanceAllowance();
+        console.log(`✅ Balance and allowances updated successfully`);
+        
+        // Check again after update
+        try {
+          const updatedBalanceAllowance = await (this.client as any).getBalanceAllowance();
+          console.log(`📊 Updated balance and allowance:`, updatedBalanceAllowance);
+        } catch (checkError) {
+          console.log(`⚠️ Could not check updated balance:`, checkError);
         }
       } catch (allowanceError) {
-        console.log(`⚠️ Failed to set allowances:`, allowanceError);
+        console.log(`⚠️ Failed to update balance/allowances:`, allowanceError);
         // Continue anyway - maybe allowances are already set
       }
 
@@ -254,9 +253,9 @@ export class PolymarketClobManager {
 
       console.log(`🔧 Setting up allowances for wallet: ${this.wallet.address}`);
       
-      // Set allowances for USDC and conditional tokens
+      // Update balance and allowances for USDC and conditional tokens
       // This is required for EOA wallets to trade
-      await this.client.setAllowances();
+      await (this.client as any).updateBalanceAllowance();
       
       console.log(`✅ Allowances set successfully`);
       
@@ -277,9 +276,9 @@ export class PolymarketClobManager {
 
       console.log(`💰 Checking balances for wallet: ${this.wallet.address}`);
       
-      // Get balance information
-      const balances = await this.client.getBalance();
-      console.log(`📊 Current balances:`, balances);
+      // Get balance and allowance information
+      const balances = await (this.client as any).getBalanceAllowance();
+      console.log(`📊 Current balances and allowances:`, balances);
       
       return balances;
       
