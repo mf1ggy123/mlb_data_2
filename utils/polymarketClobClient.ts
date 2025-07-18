@@ -39,6 +39,7 @@ export class PolymarketClobManager {
     this.wallet = new Wallet(privateKey);
     
     console.log(`🔐 Polymarket CLOB Manager initialized`);
+    console.log(this.wallet)
     console.log(`📍 Wallet address: ${this.wallet.address}`);
     console.log(`📍 Private key configured: ${privateKey.substring(0, 10)}...`);
     console.log(`📍 Chain ID: ${this.chainId}`);
@@ -63,13 +64,13 @@ export class PolymarketClobManager {
       // Create CLOB client first without credentials, then derive API key
       console.log(`🔧 Creating initial CLOB client...`);
       const tempClient = new ClobClient(this.host, this.chainId, this.wallet);
-      console.log(tempClient)
+      
       console.log(`🔑 Deriving API key for wallet: ${this.wallet.address}`);
       const creds = await tempClient.createOrDeriveApiKey();
       console.log(`✅ API credentials created:`, creds);
 
       // Use signature type 2 (EOA signature for private key)
-      const signatureType = 0;
+      const signatureType = 2;
       
       this.client = new ClobClient(
         this.host, 
