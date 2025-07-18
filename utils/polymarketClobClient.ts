@@ -70,7 +70,8 @@ export class PolymarketClobManager {
       console.log(`✅ API credentials created:`, creds);
 
       // Use signature type 1 (Magic/Email Login equivalent for private key)
-      const signatureType = 1;
+      // USe 2 for metamask wallets
+      const signatureType = 2;
       
       this.client = new ClobClient(
         this.host, 
