@@ -215,6 +215,52 @@ export class PolymarketClobManager {
     }
   }
 
+  // Set up allowances for trading (required for EOA wallets)
+  async setupAllowances(): Promise<void> {
+    try {
+      await this.ensureInitialized();
+      
+      if (!this.client) {
+        throw new Error('CLOB client not initialized');
+      }
+
+      console.log(`🔧 Setting up allowances for wallet: ${this.wallet.address}`);
+      
+      // Set allowances for USDC and conditional tokens
+      // This is required for EOA wallets to trade
+      await this.client.setAllowances();
+      
+      console.log(`✅ Allowances set successfully`);
+      
+    } catch (error) {
+      console.error('❌ Error setting allowances:', error);
+      throw error;
+    }
+  }
+
+  // Check balances and allowances
+  async checkBalances(): Promise<any> {
+    try {
+      await this.ensureInitialized();
+      
+      if (!this.client) {
+        throw new Error('CLOB client not initialized');
+      }
+
+      console.log(`💰 Checking balances for wallet: ${this.wallet.address}`);
+      
+      // Get balance information
+      const balances = await this.client.getBalance();
+      console.log(`📊 Current balances:`, balances);
+      
+      return balances;
+      
+    } catch (error) {
+      console.error('❌ Error checking balances:', error);
+      return null;
+    }
+  }
+
   // Get wallet address
   getAddress(): string {
     return this.wallet.address;
@@ -267,4 +313,16 @@ export const getCurrentOrders = async (): Promise<any[]> => {
 // Helper function to get order book
 export const getOrderBook = async (tokenID: string): Promise<any> => {
   return clobManager.getOrderBook(tokenID);
+};
+
+// Helper function to setup allowances
+export const setupAllowances = async (): Promise<void> => {
+  console.log(`🔧 Setting up allowances for trading...`);
+  return clobManager.setupAllowances();
+};
+
+// Helper function to check balances
+export const checkBalances = async (): Promise<any> => {
+  console.log(`💰 Checking wallet balances...`);
+  return clobManager.checkBalances();
 };
