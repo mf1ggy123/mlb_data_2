@@ -189,27 +189,51 @@ async def create_order(request: OrderRequest):
         print(f"📋 Creating order for token: {request.tokenID}")
         print(f"📋 Price: {request.price}, Size: {request.size}")
         
-        # First, update allowances for both USDC and conditional token
+        # First, check current balances and allowances
+        print(f"🔍 Checking current balances before order creation...")
+        
+        try:
+            # Check USDC balance
+            usdc_params = BalanceAllowanceParams(asset_type=AssetType.COLLATERAL)
+            usdc_balance = client.get_balance_allowance(params=usdc_params)
+            print(f"💰 USDC balance: {usdc_balance}")
+            
+            # Check conditional token balance
+            token_params = BalanceAllowanceParams(
+                asset_type=AssetType.CONDITIONAL,
+                token_id=request.tokenID
+            )
+            token_balance = client.get_balance_allowance(params=token_params)
+            print(f"🎯 Token balance: {token_balance}")
+            
+        except Exception as balance_error:
+            print(f"⚠️ Balance check failed: {balance_error}")
+        
+        # Update allowances for both USDC and conditional token
         print(f"🔧 Updating allowances before order creation...")
         
         try:
             # Update USDC allowances
             print(f"💰 Updating USDC allowances...")
-            usdc_params = BalanceAllowanceParams(asset_type=AssetType.COLLATERAL)
             client.update_balance_allowance(params=usdc_params)
             print(f"✅ USDC allowances updated successfully")
             
             # Update conditional token allowances
             print(f"🎯 Updating conditional token allowances...")
-            token_params = BalanceAllowanceParams(
-                asset_type=AssetType.CONDITIONAL,
-                token_id=request.tokenID
-            )
             client.update_balance_allowance(params=token_params)
             print(f"✅ Conditional token allowances updated successfully")
             
+            # Check balances again after update
+            print(f"🔍 Checking balances after allowance update...")
+            usdc_balance_after = client.get_balance_allowance(params=usdc_params)
+            token_balance_after = client.get_balance_allowance(params=token_params)
+            print(f"💰 USDC balance after update: {usdc_balance_after}")
+            print(f"🎯 Token balance after update: {token_balance_after}")
+            
         except Exception as allowance_error:
-            print(f"⚠️ Allowance update failed (continuing anyway): {allowance_error}")
+            print(f"⚠️ Allowance update failed: {allowance_error}")
+            # Don't continue if allowances failed - this might be the issue
+            raise HTTPException(status_code=500, detail=f"Allowance update failed: {allowance_error}")
         
         # Create and sign the order (following official pattern)
         order_args = OrderArgs(
