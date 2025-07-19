@@ -111,6 +111,32 @@ async def get_orders():
         print(f"❌ Failed to get orders: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/proxy_address")
+async def get_proxy_address():
+    """Get the Polymarket proxy address for funding"""
+    try:
+        client = get_clob_client()
+        
+        print(f"🏦 Getting proxy wallet address...")
+        # Try to get proxy address - this might be a method on the client
+        proxy_address = getattr(client, 'get_proxy_address', lambda: "Method not available")()
+        print(f"📍 Proxy address: {proxy_address}")
+        
+        return {
+            "success": True,
+            "proxy_address": proxy_address,
+            "message": "Send USDC to this address to fund your Polymarket account"
+        }
+        
+    except Exception as e:
+        print(f"❌ Failed to get proxy address: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "wallet_address": "0x38e2e8F5a9bD2E72CcdbeBc6b33e39FB5b1c972F",
+            "message": "You may need to deposit USDC to a Polymarket proxy address, not your wallet directly"
+        }
+
 @app.post("/balance")
 async def check_balance(request: BalanceRequest):
     """Check balance and allowances for a specific token"""
