@@ -12,6 +12,13 @@ fi
 echo "🔧 Activating virtual environment..."
 source venv/bin/activate
 
+# Verify activation worked
+echo "🔍 Checking Python and pip..."
+which python
+which pip
+python --version
+pip --version
+
 # Install dependencies
 echo "📥 Installing dependencies..."
 pip install -r requirements.txt
