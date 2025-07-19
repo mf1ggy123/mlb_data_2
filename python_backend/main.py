@@ -43,7 +43,7 @@ class BalanceRequest(BaseModel):
     token_id: str
 
 def get_clob_client():
-    """Initialize and return CLOB client with API credentials"""
+    """Initialize and return CLOB client with API credentials following official pattern"""
     global clob_client
     
     if clob_client is None:
@@ -60,21 +60,15 @@ def get_clob_client():
         print(f"📍 Private key configured: {private_key[:10]}...")
         
         try:
-            # Step 1: Create initial client to derive API key
-            print(f"🔧 Creating temporary client for API key derivation...")
-            temp_client = ClobClient(host, key=private_key, chain_id=chain_id)
+            # Initialize client that trades directly from an EOA (following official example)
+            print(f"🔧 Creating CLOB client for EOA trading...")
+            clob_client = ClobClient(host, key=private_key, chain_id=chain_id)
             
-            # Step 2: Derive API credentials (returns ApiCreds object directly)
-            print(f"🔑 Deriving API credentials...")
-            creds = temp_client.derive_api_key()
-            print(f"✅ API credentials derived: {creds}")
-            print(f"📍 API Key: {creds.api_key}")
-            print(f"📍 API Secret: {creds.api_secret[:10]}...")
-            print(f"📍 API Passphrase: {creds.api_passphrase[:10]}...")
-            
-            # Step 4: Create final client with credentials
-            print(f"🔧 Creating authenticated CLOB client...")
-            clob_client = ClobClient(host, key=private_key, chain_id=chain_id, creds=creds)
+            # Set API credentials (following official pattern)
+            print(f"🔑 Setting API credentials...")
+            api_creds = clob_client.create_or_derive_api_creds()
+            clob_client.set_api_creds(api_creds)
+            print(f"✅ API credentials set successfully")
             
             print(f"✅ CLOB client initialized successfully with API credentials")
             return clob_client
@@ -96,6 +90,26 @@ async def health():
         return {"status": "healthy", "clob_connected": client is not None}
     except Exception as e:
         return {"status": "unhealthy", "error": str(e)}
+
+@app.get("/orders")
+async def get_orders():
+    """Get all orders for the wallet"""
+    try:
+        client = get_clob_client()
+        
+        print(f"📋 Getting orders for wallet...")
+        orders = client.get_orders()
+        print(f"📊 Found {len(orders)} orders: {orders}")
+        
+        return {
+            "success": True,
+            "orders": orders,
+            "count": len(orders)
+        }
+        
+    except Exception as e:
+        print(f"❌ Failed to get orders: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/balance")
 async def check_balance(request: BalanceRequest):
@@ -197,17 +211,22 @@ async def create_order(request: OrderRequest):
         except Exception as allowance_error:
             print(f"⚠️ Allowance update failed (continuing anyway): {allowance_error}")
         
-        # Create the order
+        # Create and sign the order (following official pattern)
         order_args = OrderArgs(
-            token_id=request.tokenID,
             price=request.price,
             size=request.size,
-            side=BUY
+            side=BUY,
+            token_id=request.tokenID
         )
         
-        print(f"🔧 Creating order with args: {order_args}")
-        order_response = client.create_order(order_args)
-        print(f"✅ Order created: {order_response}")
+        print(f"🔧 Creating and signing order with args: {order_args}")
+        signed_order = client.create_order(order_args)
+        print(f"✅ Order signed: {signed_order}")
+        
+        # Post the order as GTC (Good-Till-Cancelled) - following official pattern
+        print(f"📤 Posting GTC order...")
+        order_response = client.post_order(signed_order, OrderType.GTC)
+        print(f"✅ Order posted: {order_response}")
         
         return {
             "success": True,
