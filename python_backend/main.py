@@ -13,7 +13,8 @@ from py_clob_client.clob_types import (
     BalanceAllowanceParams, 
     AssetType,
     OrderArgs,
-    OrderType
+    OrderType,
+    ApiCreds
 )
 
 # Load environment variables
@@ -42,7 +43,7 @@ class BalanceRequest(BaseModel):
     token_id: str
 
 def get_clob_client():
-    """Initialize and return CLOB client"""
+    """Initialize and return CLOB client with API credentials"""
     global clob_client
     
     if clob_client is None:
@@ -59,14 +60,25 @@ def get_clob_client():
         print(f"📍 Private key configured: {private_key[:10]}...")
         
         try:
-            clob_client = ClobClient(
-                host=host,
-                chain_id=chain_id,
-                key=private_key,
-                signature_type=1  # EOA signature type
-            )
-            print(f"✅ CLOB client initialized successfully")
+            # Step 1: Create initial client to derive API key
+            print(f"🔧 Creating temporary client for API key derivation...")
+            temp_client = ClobClient(host, key=private_key, chain_id=chain_id)
+            
+            # Step 2: Derive API credentials (returns ApiCreds object directly)
+            print(f"🔑 Deriving API credentials...")
+            creds = temp_client.derive_api_key()
+            print(f"✅ API credentials derived: {creds}")
+            print(f"📍 API Key: {creds.api_key}")
+            print(f"📍 API Secret: {creds.api_secret[:10]}...")
+            print(f"📍 API Passphrase: {creds.api_passphrase[:10]}...")
+            
+            # Step 4: Create final client with credentials
+            print(f"🔧 Creating authenticated CLOB client...")
+            clob_client = ClobClient(host, key=private_key, chain_id=chain_id, creds=creds)
+            
+            print(f"✅ CLOB client initialized successfully with API credentials")
             return clob_client
+            
         except Exception as e:
             print(f"❌ Failed to initialize CLOB client: {e}")
             raise e
@@ -99,7 +111,7 @@ async def check_balance(request: BalanceRequest):
             token_id=request.token_id
         )
         
-        balance_result = client.get_balance_allowance(balance_params)
+        balance_result = client.get_balance_allowance(params=balance_params)
         print(f"📊 Balance result: {balance_result}")
         
         return {
@@ -114,30 +126,40 @@ async def check_balance(request: BalanceRequest):
 
 @app.post("/update_allowance")
 async def update_allowance(request: BalanceRequest):
-    """Update allowances for a specific token"""
+    """Update allowances for USDC and specific conditional token"""
     try:
         client = get_clob_client()
         
         print(f"🔧 Updating allowances for token: {request.token_id}")
         
-        # Update allowances for conditional token
-        balance_params = BalanceAllowanceParams(
+        # Step 1: Update USDC (collateral) allowances
+        print(f"💰 Updating USDC allowances...")
+        usdc_params = BalanceAllowanceParams(asset_type=AssetType.COLLATERAL)
+        client.update_balance_allowance(params=usdc_params)
+        print(f"✅ USDC allowances updated successfully")
+        
+        # Step 2: Update allowances for conditional token
+        print(f"🎯 Updating conditional token allowances...")
+        token_params = BalanceAllowanceParams(
             asset_type=AssetType.CONDITIONAL,
             token_id=request.token_id
         )
+        client.update_balance_allowance(params=token_params)
+        print(f"✅ Conditional token allowances updated successfully for token: {request.token_id}")
         
-        client.update_balance_allowance(balance_params)
-        print(f"✅ Allowances updated successfully for token: {request.token_id}")
+        # Check balances after update
+        usdc_balance = client.get_balance_allowance(params=usdc_params)
+        token_balance = client.get_balance_allowance(params=token_params)
         
-        # Check balance after update
-        balance_result = client.get_balance_allowance(balance_params)
-        print(f"📊 Updated balance: {balance_result}")
+        print(f"📊 Updated USDC balance: {usdc_balance}")
+        print(f"📊 Updated token balance: {token_balance}")
         
         return {
             "success": True,
             "token_id": request.token_id,
-            "message": "Allowances updated successfully",
-            "balance": balance_result
+            "message": "USDC and conditional token allowances updated successfully",
+            "usdc_balance": usdc_balance,
+            "token_balance": token_balance
         }
         
     except Exception as e:
@@ -153,16 +175,25 @@ async def create_order(request: OrderRequest):
         print(f"📋 Creating order for token: {request.tokenID}")
         print(f"📋 Price: {request.price}, Size: {request.size}")
         
-        # First, update allowances
+        # First, update allowances for both USDC and conditional token
         print(f"🔧 Updating allowances before order creation...")
-        balance_params = BalanceAllowanceParams(
-            asset_type=AssetType.CONDITIONAL,
-            token_id=request.tokenID
-        )
         
         try:
-            client.update_balance_allowance(balance_params)
-            print(f"✅ Allowances updated successfully")
+            # Update USDC allowances
+            print(f"💰 Updating USDC allowances...")
+            usdc_params = BalanceAllowanceParams(asset_type=AssetType.COLLATERAL)
+            client.update_balance_allowance(params=usdc_params)
+            print(f"✅ USDC allowances updated successfully")
+            
+            # Update conditional token allowances
+            print(f"🎯 Updating conditional token allowances...")
+            token_params = BalanceAllowanceParams(
+                asset_type=AssetType.CONDITIONAL,
+                token_id=request.tokenID
+            )
+            client.update_balance_allowance(params=token_params)
+            print(f"✅ Conditional token allowances updated successfully")
+            
         except Exception as allowance_error:
             print(f"⚠️ Allowance update failed (continuing anyway): {allowance_error}")
         
