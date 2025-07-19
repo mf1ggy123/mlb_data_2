@@ -50,6 +50,7 @@ def get_clob_client():
         private_key = os.getenv("POLYMARKET_PRIVATE_KEY")
         host = os.getenv("POLYMARKET_API_HOST", "https://clob.polymarket.com")
         chain_id = int(os.getenv("POLYMARKET_CHAIN_ID", "137"))
+        funder_address = os.getenv("POLYMARKET_FUNDER_ADDRESS", "0x38e2e8F5a9bD2E72CcdbeBc6b33e39FB5b1c972F")
         
         if not private_key:
             raise ValueError("POLYMARKET_PRIVATE_KEY not found in environment")
@@ -62,7 +63,7 @@ def get_clob_client():
         try:
             # Initialize client that trades directly from an EOA (following official example)
             print(f"🔧 Creating CLOB client for EOA trading...")
-            clob_client = ClobClient(host, key=private_key, chain_id=chain_id)
+            clob_client = ClobClient(host, key=private_key, chain_id=chain_id, signature_type=2, funder=funder_address)
             
             # Set API credentials (following official pattern)
             print(f"🔑 Setting API credentials...")
