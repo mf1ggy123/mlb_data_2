@@ -202,8 +202,7 @@ async def create_order(request: OrderRequest):
             token_id=request.tokenID,
             price=request.price,
             size=request.size,
-            side=BUY,
-            order_type=OrderType.FOK  # Fill-or-Kill
+            side=BUY
         )
         
         print(f"🔧 Creating order with args: {order_args}")
