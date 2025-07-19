@@ -63,7 +63,7 @@ def get_clob_client():
         try:
             # Initialize client that trades directly from an EOA (following official example)
             print(f"🔧 Creating CLOB client for EOA trading...")
-            clob_client = ClobClient(host, key=private_key, chain_id=chain_id, signature_type=2, funder=funder_address)
+            clob_client = ClobClient(host, key=private_key, chain_id=chain_id, signature_type=2, funder="0xb013edc43a9cd9fe94b893551e4733d8cdbee053")
             
             # Set API credentials (following official pattern)
             print(f"🔑 Setting API credentials...")
