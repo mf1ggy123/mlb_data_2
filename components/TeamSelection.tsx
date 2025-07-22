@@ -65,7 +65,7 @@ export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
             body: JSON.stringify({
               tokenID: "74222696496792012687871550915060213431290440776324791435820797297779043018992", // Use the specific working token ID
               price: prices.homePrices?.buyPrice ? parseFloat(prices.homePrices.buyPrice) : 0.6, // Default to 60¢ if no price
-              size: 2 // Working size from our tests
+              size: 5 // Buy 5 shares
             })
           });
           

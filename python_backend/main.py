@@ -37,7 +37,7 @@ clob_client = None
 class OrderRequest(BaseModel):
     tokenID: str = "74222696496792012687871550915060213431290440776324791435820797297779043018992"  # Working token ID
     price: float = 0.6
-    size: int = 2
+    size: int = 5  # Buy 5 shares
 
 class BalanceRequest(BaseModel):
     token_id: str
