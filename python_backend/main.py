@@ -35,9 +35,9 @@ app.add_middleware(
 clob_client = None
 
 class OrderRequest(BaseModel):
-    tokenID: str = "114183019933082513843876282428124080806413441694571280704200740076696508405866"  # Default token ID
-    price: float = 0.5
-    size: int = 1
+    tokenID: str = "74222696496792012687871550915060213431290440776324791435820797297779043018992"  # Working token ID
+    price: float = 0.6
+    size: int = 2
 
 class BalanceRequest(BaseModel):
     token_id: str
