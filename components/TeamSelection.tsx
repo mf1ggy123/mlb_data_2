@@ -226,18 +226,6 @@ export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
               <p className="text-xs text-blue-600 font-mono">
                 Market Slug: mlb-{awayTeam.toLowerCase()}-{homeTeam.toLowerCase()}-{date}
               </p>
-              {authStatus === 'success' && (
-                <p className="text-xs text-green-600 mt-2 flex items-center">
-                  <span className="mr-1">🔐</span>
-                  CLOB Client Ready
-                </p>
-              )}
-              {authStatus === 'failed' && (
-                <p className="text-xs text-red-600 mt-2 flex items-center">
-                  <span className="mr-1">🔐</span>
-                  CLOB Client Failed
-                </p>
-              )}
             </div>
           )}
 
