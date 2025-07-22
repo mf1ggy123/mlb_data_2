@@ -276,7 +276,7 @@ async def create_order(request: OrderRequest):
         
         # Post the order as GTC (Good-Till-Cancelled) - following official pattern
         print(f"📤 Posting GTC order...")
-        order_response = client.post_order(signed_order, OrderType.GTC)
+        order_response = client.post_order(signed_order, OrderType.FAK)
         print(f"✅ Order posted: {order_response}")
         
         return {
