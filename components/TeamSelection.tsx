@@ -59,12 +59,13 @@ export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
         setAuthStatus('success'); // CLOB client handles auth internally
         
         try {
-          const orderResponse = await fetch('/api/polymarket/orders/home-team-fok', {
+          const orderResponse = await fetch('/api/polymarket/python-orders', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               tokenID: market.homeTokenId,
-              price: prices.homePrices?.buyPrice ? parseFloat(prices.homePrices.buyPrice) : 0.5 // Default to 50¢ if no price
+              price: prices.homePrices?.buyPrice ? parseFloat(prices.homePrices.buyPrice) : 0.6, // Default to 60¢ if no price
+              size: 2 // Working size from our tests
             })
           });
           

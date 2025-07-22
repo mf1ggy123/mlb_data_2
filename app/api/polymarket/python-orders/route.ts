@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   
   try {
     const body = await request.json();
-    const { tokenID, price = 0.5, size = 1 } = body;
+    const { tokenID, price = 0.6, size = 2 } = body;
     
     if (!tokenID) {
       throw new Error('tokenID is required');
