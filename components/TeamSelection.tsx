@@ -20,14 +20,31 @@ export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]); // Today's date
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [authStatus, setAuthStatus] = useState<'pending' | 'success' | 'failed'>('pending');
-  const [orderStatus, setOrderStatus] = useState<'pending' | 'success' | 'failed'>('pending');
+  const [userName, setUserName] = useState<string>('');
+  const [nameError, setNameError] = useState<string | null>(null);
   const validTeamCodes = getValidMLBTeamCodes();
+  
+  // List of verified users
+  const verifiedUsers = ['Michael'];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setNameError(null);
     setLoading(true);
+
+    // Verify user name first
+    if (!userName.trim()) {
+      setNameError('Please enter your name');
+      setLoading(false);
+      return;
+    }
+
+    if (!verifiedUsers.includes(userName.trim())) {
+      setNameError(`Access denied. "${userName}" is not authorized to use this system.`);
+      setLoading(false);
+      return;
+    }
 
     try {
       console.log(`🚀 Attempting to find market for ${awayTeam.toUpperCase()} @ ${homeTeam.toUpperCase()} on ${date}`);
@@ -53,39 +70,8 @@ export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
         console.warn(`⚠️ Unable to fetch prices for market`);
       }
       
-      // Create buy order for home team (CLOB client handles authentication internally)
-      if (market.homeTokenId) {
-        console.log(`🏠 Creating buy order for home team: ${homeTeam.toUpperCase()}`);
-        setAuthStatus('success'); // CLOB client handles auth internally
-        
-        try {
-          const orderResponse = await fetch('/api/polymarket/python-orders', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              tokenID: "74222696496792012687871550915060213431290440776324791435820797297779043018992", // Use the specific working token ID
-              price: prices.homePrices?.sellPrice ? parseFloat(prices.homePrices.sellPrice) : 0.6, // Use sell price (ask) when buying
-              size: 5 // Buy 5 shares
-            })
-          });
-          
-          const orderData = await orderResponse.json();
-          
-          if (orderData.success) {
-            console.log(`✅ Home team buy order created successfully:`, orderData);
-            console.log(`📋 Order ID: ${orderData.orderId}`);
-            console.log(`💰 Order Price: ${orderData.orderDetails?.priceFormatted || 'N/A'}`);
-            console.log(`📊 Order Size: ${orderData.orderDetails?.size || 1} share(s)`);
-            setOrderStatus('success');
-          } else {
-            console.error(`❌ Home team buy order creation failed:`, orderData.error);
-            setOrderStatus('failed');
-          }
-        } catch (orderError) {
-          console.error(`❌ Order creation request failed:`, orderError);
-          setOrderStatus('failed');
-        }
-      }
+      console.log(`✅ Market found and prices fetched successfully!`);
+      console.log(`👤 Authorized user: ${userName}`);
       
       onMarketFound(market, awayTeam, homeTeam, date);
     } catch (err) {
@@ -114,7 +100,8 @@ export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
     }
   };
 
-  const isFormValid = awayTeam && homeTeam && date && 
+  const isFormValid = userName.trim() && 
+    awayTeam && homeTeam && date && 
     isValidMLBTeamCode(awayTeam) && isValidMLBTeamCode(homeTeam) &&
     awayTeam !== homeTeam;
 
@@ -128,6 +115,26 @@ export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Your Name
+            </label>
+            <input
+              type="text"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              placeholder="Enter your name"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+            {nameError && (
+              <p className="text-sm text-red-600 mt-1 flex items-center">
+                <span className="mr-1">✗</span>
+                {nameError}
+              </p>
+            )}
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Away Team Code
@@ -229,18 +236,6 @@ export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
                 <p className="text-xs text-red-600 mt-2 flex items-center">
                   <span className="mr-1">🔐</span>
                   CLOB Client Failed
-                </p>
-              )}
-              {orderStatus === 'success' && (
-                <p className="text-xs text-green-600 mt-2 flex items-center">
-                  <span className="mr-1">📋</span>
-                  Home Team FOK Buy Order Created
-                </p>
-              )}
-              {orderStatus === 'failed' && (
-                <p className="text-xs text-red-600 mt-2 flex items-center">
-                  <span className="mr-1">📋</span>
-                  FOK Order Creation Failed
                 </p>
               )}
             </div>
