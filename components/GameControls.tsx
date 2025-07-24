@@ -16,6 +16,7 @@ import GameStateEditor from './GameStateEditor';
 import { GameState } from '@/types/baseball';
 import Scoreboard from './Scoreboard';
 import BaseballDiamond from './BaseballDiamond';
+import { syncGameState } from '@/utils/contractDecisionService';
 
 // Convert PlayOutcome to PlayOption for UI compatibility
 const convertOutcomeToOption = (outcome: PlayOutcome, index: number): PlayOption => {
@@ -390,14 +391,30 @@ export default function GameControls() {
   const [showGameStateEditor, setShowGameStateEditor] = useState(false);
   const [playQuality, setPlayQuality] = useState('neutral');
   const [basePathQuality, setBasePathQuality] = useState('neutral');
+  // Removed all automatic contract decision state
 
   const handleStrike = () => dispatch({ type: 'STRIKE' });
   const handleBall = () => dispatch({ type: 'BALL' });
   const handleFoul = () => dispatch({ type: 'FOUL' });
   const handleUndo = () => dispatch({ type: 'UNDO' });
 
+  // Sync game state to backend whenever it changes
+  React.useEffect(() => {
+    const syncState = async () => {
+      await syncGameState(gameState);
+    };
+    syncState();
+  }, [gameState]);
+
+  // All backend communication functions removed
+
+  // No automatic balance loading - will be manual only
+
+  // All automatic backend communication removed - will be manual only
+
   const handleGameStateSave = (newGameState: GameState) => {
-    dispatch({ type: 'SET_GAME_STATE', gameState: newGameState });
+    // Manual game state changes should not trigger betting analysis
+    dispatch({ type: 'SET_GAME_STATE', gameState: newGameState, source: 'manual_edit' });
     setShowGameStateEditor(false);
   };
 
@@ -641,6 +658,8 @@ export default function GameControls() {
           ⚙
         </button>
         
+        {/* Predictive Analysis Button removed */}
+
         {/* Undo Button */}
         <button
           onClick={handleUndo}
@@ -661,6 +680,8 @@ export default function GameControls() {
 
       {/* Baseball Diamond */}
       <BaseballDiamond />
+
+      {/* All balance and contract status displays removed */}
 
       {/* Strike/Ball/Foul Controls */}
       <div className="grid grid-cols-3 gap-3">
@@ -687,13 +708,19 @@ export default function GameControls() {
       {/* In-Play and Base Path Controls */}
       <div className="grid grid-cols-2 gap-3">
         <button
-          onClick={() => setShowPlayModal(true)}
+          onClick={() => {
+            setPlayQuality('neutral');
+            setShowPlayModal(true);
+          }}
           className="bg-green-600 hover:bg-green-700 text-white font-bold py-6 px-4 rounded-lg text-xl shadow-lg active:scale-95 transition-transform"
         >
           IN PLAY
         </button>
         <button
-          onClick={() => setShowStealModal(true)}
+          onClick={() => {
+            setBasePathQuality('neutral');
+            setShowStealModal(true);
+          }}
           disabled={!hasRunnersOnBase}
           className={`font-bold py-6 px-4 rounded-lg text-xl shadow-lg active:scale-95 transition-transform ${
             hasRunnersOnBase
@@ -724,6 +751,19 @@ export default function GameControls() {
 
           {/* Play Options */}
           <div className="flex-1 p-4 overflow-y-auto">
+            {/* Foul Ball Button */}
+            <div className="mb-4">
+              <button
+                onClick={() => {
+                  setShowPlayModal(false);
+                  handleFoul();
+                }}
+                className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-4 px-4 rounded-lg text-lg shadow-lg active:scale-95 transition-transform"
+              >
+                FOUL BALL
+              </button>
+            </div>
+            
             <div className="space-y-3">
               {getPlayOptionsByQuality(playQuality, gameState).map((play) => (
                 <button

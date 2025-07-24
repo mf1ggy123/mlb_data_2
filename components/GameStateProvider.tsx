@@ -25,7 +25,7 @@ type GameAction =
   | { type: 'UNDO' }
   | { type: 'APPLY_PLAY_OUTCOME'; outcome: any }
   | { type: 'APPLY_BASE_PATH_OUTCOME'; outcome: any }
-  | { type: 'SET_GAME_STATE'; gameState: GameState };
+  | { type: 'SET_GAME_STATE'; gameState: GameState; source?: string };
 
 const initialGameState: GameState = {
   homeScore: 0,
@@ -261,7 +261,12 @@ function gameStateReducer(state: GameStateWithHistory, action: GameAction): Game
 
       case 'SET_GAME_STATE':
         // Set entire game state (for game state editor)
-        return action.gameState;
+        const updatedState = action.gameState;
+        // Track the source of this action for filtering purposes
+        if (action.source) {
+          (updatedState as any)._lastActionSource = action.source;
+        }
+        return updatedState;
 
       default:
         return state.current;

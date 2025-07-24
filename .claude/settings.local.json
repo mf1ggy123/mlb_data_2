@@ -28,7 +28,9 @@
       "Bash(rg:*)",
       "Bash(/usr/local/bin/node:*)",
       "Bash(npm ls:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(python:*)",
+      "Bash(timeout:*)"
     ],
     "deny": []
   }

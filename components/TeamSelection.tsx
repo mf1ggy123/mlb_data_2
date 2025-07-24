@@ -9,6 +9,7 @@ import {
   getMarketTokenPrices,
   PolymarketMarket 
 } from '@/utils/polymarketApi';
+// Removed initializeGame import
 
 interface TeamSelectionProps {
   onMarketFound: (market: PolymarketMarket, awayTeam: string, homeTeam: string, date: string) => void;
@@ -73,6 +74,8 @@ export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
       console.log(`✅ Market found and prices fetched successfully!`);
       console.log(`👤 Authorized user: ${userName}`);
       
+      // Game balance initialization removed
+      
       onMarketFound(market, awayTeam, homeTeam, date);
     } catch (err) {
       console.error(`❌ Market search failed:`, err);
@@ -106,8 +109,8 @@ export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
     awayTeam !== homeTeam;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
+    <div className="h-screen overflow-hidden bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">⚾ Baseball Game Setup</h1>
           <p className="text-gray-600">Enter team codes to find the Polymarket and start simulation</p>
@@ -217,17 +220,6 @@ export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
             />
           </div>
 
-          {/* Generated Slug Preview */}
-          {awayTeam && homeTeam && date && isFormValid && (
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-700 mb-1">
-                <strong>Matchup:</strong> {getTeamNameSafe(awayTeam)} @ {getTeamNameSafe(homeTeam)}
-              </p>
-              <p className="text-xs text-blue-600 font-mono">
-                Market Slug: mlb-{awayTeam.toLowerCase()}-{homeTeam.toLowerCase()}-{date}
-              </p>
-            </div>
-          )}
 
           <button
             type="submit"
@@ -258,32 +250,6 @@ export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
           </div>
         )}
 
-        {/* Valid Team Codes Reference */}
-        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-          <h3 className="text-gray-800 font-medium mb-3 text-center">Valid MLB Team Codes</h3>
-          <div className="grid grid-cols-6 gap-1 text-xs">
-            {validTeamCodes.map((code) => (
-              <button
-                key={code}
-                type="button"
-                onClick={() => {
-                  if (!awayTeam) {
-                    setAwayTeam(code);
-                  } else if (!homeTeam && code !== awayTeam) {
-                    setHomeTeam(code);
-                  }
-                }}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-center font-mono transition-colors cursor-pointer"
-                title={getTeamNameSafe(code)}
-              >
-                {code.toUpperCase()}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-gray-500 mt-2 text-center">
-            Click a code to auto-fill fields
-          </p>
-        </div>
       </div>
     </div>
   );
