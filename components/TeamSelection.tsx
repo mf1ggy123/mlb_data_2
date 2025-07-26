@@ -9,7 +9,7 @@ import {
   getMarketTokenPrices,
   PolymarketMarket 
 } from '@/utils/polymarketApi';
-// Removed initializeGame import
+import { initializeGame } from '@/utils/contractDecisionService';
 
 interface TeamSelectionProps {
   onMarketFound: (market: PolymarketMarket, awayTeam: string, homeTeam: string, date: string) => void;
@@ -74,7 +74,16 @@ export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
       console.log(`✅ Market found and prices fetched successfully!`);
       console.log(`👤 Authorized user: ${userName}`);
       
-      // Game balance initialization removed
+      // Initialize game with $1000 starting balance
+      console.log(`💰 Initializing game balance...`);
+      const gameId = `${awayTeam}_${homeTeam}_${date}`;
+      const gameInitResult = await initializeGame(homeTeam, awayTeam, gameId);
+      
+      if (gameInitResult.success) {
+        console.log(`✅ Game initialized with balance: $${gameInitResult.balance}`);
+      } else {
+        console.warn(`⚠️ Game initialization failed: ${gameInitResult.error}`);
+      }
       
       onMarketFound(market, awayTeam, homeTeam, date);
     } catch (err) {

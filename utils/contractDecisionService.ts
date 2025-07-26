@@ -52,19 +52,33 @@ interface ContractDecisionResponse {
 /**
  * Sync game state to backend
  */
-export async function syncGameState(gameState: GameState): Promise<{
+export async function syncGameState(
+  gameState: GameState, 
+  playQuality?: string, 
+  actionType?: string
+): Promise<{
   success: boolean;
   error?: string;
 }> {
   try {
-    console.log('🔄 Syncing game state to backend:', gameState);
+    const payload = {
+      gameState,
+      ...(playQuality && { playQuality }),
+      ...(actionType && { actionType })
+    };
+
+    console.log('🔄 Syncing game state to backend:', {
+      gameState: gameState,
+      playQuality,
+      actionType
+    });
 
     const response = await fetch('/api/polymarket/sync-game-state', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ gameState }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -75,6 +89,9 @@ export async function syncGameState(gameState: GameState): Promise<{
     
     if (result.success) {
       console.log('✅ Game state synced successfully');
+      if (result.play_quality) {
+        console.log(`⚾ Play quality tracked: ${result.play_quality}`);
+      }
     }
 
     return result;

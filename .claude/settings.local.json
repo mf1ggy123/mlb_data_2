@@ -30,7 +30,10 @@
       "Bash(npm ls:*)",
       "Bash(chmod:*)",
       "Bash(python:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(pip install:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }

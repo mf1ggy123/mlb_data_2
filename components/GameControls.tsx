@@ -16,7 +16,7 @@ import GameStateEditor from './GameStateEditor';
 import { GameState } from '@/types/baseball';
 import Scoreboard from './Scoreboard';
 import BaseballDiamond from './BaseballDiamond';
-import { syncGameState } from '@/utils/contractDecisionService';
+import { syncGameState, getCurrentMarketPrices } from '@/utils/contractDecisionService';
 
 // Convert PlayOutcome to PlayOption for UI compatibility
 const convertOutcomeToOption = (outcome: PlayOutcome, index: number): PlayOption => {
@@ -147,7 +147,7 @@ const getDisplayThresholds = (gameState: any) => {
     o.outsGained === 1 && o.runsScored === 0
   );
   
-  const maxOneOutNoRunValue = outcomesWithOneOutNoRuns.length > 0 
+  let maxOneOutNoRunValue = outcomesWithOneOutNoRuns.length > 0 
     ? Math.max(...outcomesWithOneOutNoRuns.map(o => o.normValue || 0))
     : -1;
     
@@ -184,9 +184,22 @@ const getDisplayThresholds = (gameState: any) => {
     return true;
   });
   
-  const maxNoOutsNoRunsValue = outcomesNoOutsNoRuns.length > 0 
-    ? Math.max(...outcomesNoOutsNoRuns.map(o => o.normValue || 0))
-    : -1;
+  let maxNoOutsNoRunsValue;
+  if (outcomesNoOutsNoRuns.length > 0) {
+    maxNoOutsNoRunsValue = Math.max(...outcomesNoOutsNoRuns.map(o => o.normValue || 0));
+  } else {
+    // If no "no outs, no runs" outcomes exist, use a more flexible approach
+    // Find outcomes that are neutral-ish: minimal impact plays
+    const neutralCandidates = allOutcomes.filter(o => o.outsGained <= 1 && o.runsScored <= 1);
+    if (neutralCandidates.length > 0) {
+      // Use median of neutral candidates as upper bound
+      const neutralNorms = neutralCandidates.map(o => o.normValue || 0).sort((a, b) => a - b);
+      const medianIndex = Math.floor(neutralNorms.length / 2);
+      maxNoOutsNoRunsValue = neutralNorms[medianIndex];
+    } else {
+      maxNoOutsNoRunsValue = 0.0; // Default neutral value
+    }
+  }
   
   const getPercentile = (p: number) => {
     const index = Math.floor((p / 100) * normValues.length);
@@ -194,30 +207,51 @@ const getDisplayThresholds = (gameState: any) => {
   };
   
   // Determine bad min based on double play possibility
-  const badMinValue = maxDoublePlayValue !== null 
+  let badMinValue = maxDoublePlayValue !== null 
     ? maxDoublePlayValue + 0.001
     : minOneOutNoRunValue;
+  
+  // Special case: when there are 2 outs, give bad range the same range as very-bad options
+  if (gameState.outs === 2) {
+    // Bad range should be exactly the same as very-bad: maxOutNoRun to maxOutNoRun
+    // This gives bad the same options as very-bad
+    badMinValue = maxOutNoRunValue;
+    maxOneOutNoRunValue = maxOutNoRunValue;
+  }
+  
 
-  // Calculate good range bounds
-  const outcomesRunsMaxOneOut = allOutcomes.filter(o => 
-    o.runsScored >= 1 && o.outsGained <= 1
-  );
+  // Calculate good range bounds - include singles where no outs occur
+  const outcomesGoodCandidates = allOutcomes.filter(o => {
+    // Include outcomes with runs scored and at most one out
+    if (o.runsScored >= 1 && o.outsGained <= 1) return true;
+    
+    // Include ALL outcomes where no outs occur and could be singles
+    if (o.outsGained === 0) {
+      // Check for single patterns: batter reaches first base
+      if (o.finalBases.first) return true;
+      
+      // Also include outcomes where no runs scored and no outs (conservative hits)
+      if (o.runsScored === 0) return true;
+    }
+    
+    return false;
+  });
   
   let goodMinValue;
-  if (outcomesRunsMaxOneOut.length > 0) {
-    goodMinValue = Math.min(...outcomesRunsMaxOneOut.map(o => o.normValue || 0));
+  if (outcomesGoodCandidates.length > 0) {
+    goodMinValue = Math.min(...outcomesGoodCandidates.map(o => o.normValue || 0));
   } else {
-    // Fallback: lowest norm_value where no outs occur
+    // Fallback: find the minimum value from all no-out outcomes
     const outcomesNoOuts = allOutcomes.filter(o => o.outsGained === 0);
-    goodMinValue = outcomesNoOuts.length > 0 
-      ? Math.min(...outcomesNoOuts.map(o => o.normValue || 0))
-      : -1;
+    if (outcomesNoOuts.length > 0) {
+      goodMinValue = Math.min(...outcomesNoOuts.map(o => o.normValue || 0));
+    } else {
+      // Ultimate fallback: use a very conservative value
+      goodMinValue = -0.5;
+    }
   }
 
-  // Special case: if no runners on base, set Good lower bound to 0
-  if (!gameState.bases.first && !gameState.bases.second && !gameState.bases.third) {
-    goodMinValue = 0;
-  }
+  // Don't override goodMinValue - let singles be included in good range regardless of base situation
 
   const thresholds = {
     p25: getPercentile(25),
@@ -308,9 +342,6 @@ const getDisplayThresholds = (gameState: any) => {
       if (validOutcomes.length > 0) {
         veryGoodMinValue = Math.min(...validOutcomes.map(v => v.normValue));
         
-        // Debug logging - remove this later
-        console.log('Very Good valid outcomes (UI):', validOutcomes);
-        console.log('Very Good min value (UI):', veryGoodMinValue);
       }
       
       
@@ -391,20 +422,60 @@ export default function GameControls() {
   const [showGameStateEditor, setShowGameStateEditor] = useState(false);
   const [playQuality, setPlayQuality] = useState('neutral');
   const [basePathQuality, setBasePathQuality] = useState('neutral');
-  // Removed all automatic contract decision state
+  const [marketPrices, setMarketPrices] = useState<{
+    home: number;
+    away: number;
+  } | null>(null);
 
-  const handleStrike = () => dispatch({ type: 'STRIKE' });
-  const handleBall = () => dispatch({ type: 'BALL' });
-  const handleFoul = () => dispatch({ type: 'FOUL' });
-  const handleUndo = () => dispatch({ type: 'UNDO' });
 
-  // Sync game state to backend whenever it changes
+  const handleStrike = () => {
+    setCurrentPlayContext({ actionType: 'STRIKE' });
+    dispatch({ type: 'STRIKE' });
+  };
+  
+  const handleBall = () => {
+    setCurrentPlayContext({ actionType: 'BALL' });
+    dispatch({ type: 'BALL' });
+  };
+  
+  const handleFoul = () => {
+    setCurrentPlayContext({ actionType: 'FOUL' });
+    dispatch({ type: 'FOUL' });
+  };
+  
+  const handleUndo = () => {
+    setCurrentPlayContext({ actionType: 'UNDO' });
+    dispatch({ type: 'UNDO' });
+  };
+
+  // State to track current play context
+  const [currentPlayContext, setCurrentPlayContext] = useState<{
+    quality?: string;
+    actionType?: string;
+  }>({});
+
+  // Sync game state to backend and fetch prices whenever it changes
   React.useEffect(() => {
-    const syncState = async () => {
-      await syncGameState(gameState);
+    const syncStateAndFetchPrices = async () => {
+      // Generate gameId for price fetching
+      const gameId = `${gameState.homeTeam}_${gameState.awayTeam}`;
+      
+      // Sync game state and fetch prices in parallel
+      const [syncResult, pricesResult] = await Promise.all([
+        syncGameState(gameState, currentPlayContext.quality, currentPlayContext.actionType),
+        getCurrentMarketPrices(gameId)
+      ]);
+      
+      if (pricesResult.success && pricesResult.prices) {
+        console.log('💰 Updated market prices:', pricesResult.prices);
+        setMarketPrices(pricesResult.prices);
+      } else {
+        console.warn('⚠️ Failed to fetch market prices:', pricesResult.error);
+      }
     };
-    syncState();
-  }, [gameState]);
+    
+    syncStateAndFetchPrices();
+  }, [gameState, currentPlayContext]);
 
   // All backend communication functions removed
 
@@ -424,6 +495,12 @@ export default function GameControls() {
 
   const handlePlaySelect = (play: PlayOption) => {
     setShowPlayModal(false);
+    
+    // Set play context with quality information
+    setCurrentPlayContext({ 
+      actionType: 'IN_PLAY', 
+      quality: playQuality 
+    });
     
     // Use Retrosheet outcome data if available
     if (play.outcome) {
@@ -619,6 +696,12 @@ export default function GameControls() {
   const handleStealSelect = (steal: StealOption) => {
     setShowStealModal(false);
     
+    // Set play context for base path actions
+    setCurrentPlayContext({ 
+      actionType: 'BASE_PATH', 
+      quality: basePathQuality 
+    });
+    
     // Use Retrosheet outcome data if available
     if (steal.outcome) {
       // Apply all outcome effects in a single action for proper undo
@@ -678,10 +761,25 @@ export default function GameControls() {
       {/* Scoreboard */}
       <Scoreboard />
 
+      {/* Market Prices Display */}
+      {marketPrices && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+          <div className="font-medium text-blue-800 mb-2">Live Market Prices</div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center">
+              <div className="text-xs text-gray-600">{gameState.homeTeam} (Home)</div>
+              <div className="text-lg font-bold text-blue-900">${marketPrices.home.toFixed(3)}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xs text-gray-600">{gameState.awayTeam} (Away)</div>
+              <div className="text-lg font-bold text-blue-900">${marketPrices.away.toFixed(3)}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Baseball Diamond */}
       <BaseballDiamond />
-
-      {/* All balance and contract status displays removed */}
 
       {/* Strike/Ball/Foul Controls */}
       <div className="grid grid-cols-3 gap-3">
@@ -711,6 +809,11 @@ export default function GameControls() {
           onClick={() => {
             setPlayQuality('neutral');
             setShowPlayModal(true);
+            // Capture price snapshot when IN PLAY button is pressed
+            setCurrentPlayContext({
+              quality: undefined,
+              actionType: 'IN_PLAY_PRESSED'
+            });
           }}
           className="bg-green-600 hover:bg-green-700 text-white font-bold py-6 px-4 rounded-lg text-xl shadow-lg active:scale-95 transition-transform"
         >
@@ -828,7 +931,14 @@ export default function GameControls() {
               ].map((quality) => (
                 <button
                   key={quality.key}
-                  onClick={() => setPlayQuality(quality.key)}
+                  onClick={() => {
+                    setPlayQuality(quality.key);
+                    // Immediately sync quality change to backend
+                    setCurrentPlayContext({ 
+                      actionType: 'QUALITY_CHANGE', 
+                      quality: quality.key 
+                    });
+                  }}
                   className={`py-3 px-2 rounded-lg text-white font-medium text-sm transition-all ${
                     playQuality === quality.key 
                       ? `${quality.color} ring-4 ring-blue-300` 
@@ -921,7 +1031,14 @@ export default function GameControls() {
               ].map((quality) => (
                 <button
                   key={quality.key}
-                  onClick={() => setBasePathQuality(quality.key)}
+                  onClick={() => {
+                    setBasePathQuality(quality.key);
+                    // Immediately sync quality change to backend
+                    setCurrentPlayContext({ 
+                      actionType: 'BASE_PATH_QUALITY_CHANGE', 
+                      quality: quality.key 
+                    });
+                  }}
                   className={`py-3 px-2 rounded-lg text-white font-medium text-sm transition-all ${
                     basePathQuality === quality.key 
                       ? `${quality.color} ring-4 ring-blue-300` 
