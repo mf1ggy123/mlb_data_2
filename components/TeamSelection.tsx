@@ -10,9 +10,10 @@ import {
   PolymarketMarket 
 } from '@/utils/polymarketApi';
 import { initializeGame } from '@/utils/contractDecisionService';
+import { checkSaveExists, loadGameState, LoadStateResponse } from '@/utils/saveLoadService';
 
 interface TeamSelectionProps {
-  onMarketFound: (market: PolymarketMarket, awayTeam: string, homeTeam: string, date: string) => void;
+  onMarketFound: (market: PolymarketMarket, awayTeam: string, homeTeam: string, date: string, username?: string, loadedGameState?: any) => void;
 }
 
 export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
@@ -23,10 +24,85 @@ export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
   const [nameError, setNameError] = useState<string | null>(null);
+  const [saveExists, setSaveExists] = useState<boolean>(false);
+  const [checkingSave, setCheckingSave] = useState<boolean>(false);
+  const [loadingSave, setLoadingSave] = useState<boolean>(false);
   const validTeamCodes = getValidMLBTeamCodes();
   
   // List of verified users
   const verifiedUsers = ['Michael'];
+
+  // Check for existing save when teams and username change
+  useEffect(() => {
+    const checkForExistingSave = async () => {
+      if (userName.trim() && awayTeam && homeTeam && isValidMLBTeamCode(awayTeam) && isValidMLBTeamCode(homeTeam)) {
+        setCheckingSave(true);
+        try {
+          console.log('🔍 Checking for save with params:', {
+            username: userName.trim(),
+            homeTeam: homeTeam.toUpperCase(),
+            awayTeam: awayTeam.toUpperCase(),
+            date: date
+          });
+          const saveCheck = await checkSaveExists(userName.trim(), homeTeam.toUpperCase(), awayTeam.toUpperCase(), date);
+          console.log('🔍 Save check result:', saveCheck);
+          setSaveExists(saveCheck?.exists || false);
+        } catch (error) {
+          console.error('Error checking save:', error);
+          setSaveExists(false);
+        } finally {
+          setCheckingSave(false);
+        }
+      } else {
+        setSaveExists(false);
+      }
+    };
+
+    checkForExistingSave();
+  }, [userName, awayTeam, homeTeam, date]);
+
+  const handleLoadSave = async () => {
+    if (!userName.trim() || !awayTeam || !homeTeam) return;
+    
+    console.log('🔄 Starting load process with params:', {
+      username: userName.trim(),
+      homeTeam: homeTeam.toUpperCase(),
+      awayTeam: awayTeam.toUpperCase(),
+      date: date
+    });
+    
+    setLoadingSave(true);
+    try {
+      const loadResult = await loadGameState({
+        username: userName.trim(),
+        homeTeam: homeTeam.toUpperCase(),
+        awayTeam: awayTeam.toUpperCase(),
+        date: date
+      });
+
+      console.log('📂 Load result received:', loadResult);
+
+      if (loadResult.success && loadResult.gameState) {
+        console.log('✅ Load successful, getting market...');
+        
+        // Get the market (still needed for the frontend)
+        const market = await getMLBGameMarket(awayTeam, homeTeam, date);
+        console.log('📈 Market retrieved:', market);
+        
+        // Pass the loaded game state to the parent
+        console.log('🎮 Calling onMarketFound with loaded data...');
+        onMarketFound(market, awayTeam.toUpperCase(), homeTeam.toUpperCase(), date, userName.trim(), loadResult);
+      } else {
+        console.error('❌ Load failed:', loadResult);
+        setError(loadResult.message || 'Failed to load save state');
+      }
+    } catch (error) {
+      console.error('❌ Error loading save:', error);
+      setError('Failed to load saved game');
+    } finally {
+      setLoadingSave(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,7 +161,7 @@ export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
         console.warn(`⚠️ Game initialization failed: ${gameInitResult.error}`);
       }
       
-      onMarketFound(market, awayTeam, homeTeam, date);
+      onMarketFound(market, awayTeam, homeTeam, date, userName.trim());
     } catch (err) {
       console.error(`❌ Market search failed:`, err);
       
@@ -229,6 +305,26 @@ export default function TeamSelection({ onMarketFound }: TeamSelectionProps) {
             />
           </div>
 
+
+
+          {/* Load Save Button - Shows when save exists */}
+          {saveExists && (
+            <button
+              type="button"
+              onClick={handleLoadSave}
+              disabled={loadingSave || !isFormValid}
+              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold py-3 px-4 rounded-lg transition-colors text-lg mb-3"
+            >
+              {loadingSave ? (
+                <span className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Loading Saved Game...
+                </span>
+              ) : (
+                '📂 Load Saved Game'
+              )}
+            </button>
+          )}
 
           <button
             type="submit"

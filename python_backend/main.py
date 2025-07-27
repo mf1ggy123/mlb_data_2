@@ -69,6 +69,16 @@ class ContractTransaction(BaseModel):
     total_cost: float
     reason: str
 
+class SaveStateRequest(BaseModel):
+    username: str
+    gameState: Dict[str, Any]
+    
+class LoadStateRequest(BaseModel):
+    username: str
+    homeTeam: str
+    awayTeam: str
+    date: str = None  # Optional, defaults to today
+
 def load_win_percentage_data():
     """
     Load the statswithballsstrikes file and calculate win percentages for each game situation.
@@ -1070,7 +1080,6 @@ def generate_polymarket_slug(home_team: str, away_team: str, date_str: str = Non
     away_lower = away_team.lower()
     
     slug = f"mlb-{away_lower}-{home_lower}-{date_str}"
-    print(f"🏷️ Generated slug: {slug}")
     return slug
 
 async def fetch_market_data_from_slug(slug: str) -> Dict[str, Any]:
@@ -1101,7 +1110,7 @@ async def fetch_market_data_from_slug(slug: str) -> Dict[str, Any]:
                         
                         # Check for parsedClobTokenIds specifically
                         if 'clobTokenIds' in market:
-                            print(f"✅ Found clobTokenIds in market data")
+                            print()
                         else:
                             print(f"⚠️ No clobTokenIds found. Available keys: {list(market.keys())}")
                         
@@ -1170,7 +1179,6 @@ async def fetch_and_cache_tokens(home_team: str, away_team: str, date_str: str =
         
         clob_token_ids = market.get('clobTokenIds', '[]')
         if isinstance(clob_token_ids, str):
-            print(f"🔧 Parsing clobTokenIds string: {clob_token_ids[:100]}...")
             try:
                 import json
                 parsed_tokens = json.loads(clob_token_ids)
@@ -1179,9 +1187,7 @@ async def fetch_and_cache_tokens(home_team: str, away_team: str, date_str: str =
                 raise Exception(f"Invalid clobTokenIds JSON: {str(e)}")
         else:
             parsed_tokens = clob_token_ids
-        
-        print(f"📋 Parsed tokens: {parsed_tokens}")
-        
+                
         if not isinstance(parsed_tokens, list) or len(parsed_tokens) < 2:
             raise Exception(f"Expected 2 tokens in parsedClobTokenIds, got {len(parsed_tokens) if isinstance(parsed_tokens, list) else 'non-list'}")
         
@@ -1206,11 +1212,9 @@ async def fetch_and_cache_tokens(home_team: str, away_team: str, date_str: str =
             else:
                 away_token_id = parsed_tokens[0]
                 home_token_id = parsed_tokens[1]
-                print(f"🔄 Using standard assignment: first=away, second=home")
         else:
             away_token_id = parsed_tokens[0]
             home_token_id = parsed_tokens[1]
-            print(f"🔄 Using standard assignment: first=away, second=home")
         
         # Cache the tokens
         cached_tokens[game_id] = {
@@ -1220,11 +1224,7 @@ async def fetch_and_cache_tokens(home_team: str, away_team: str, date_str: str =
             "home_team": home_team,
             "away_team": away_team
         }
-        
-        print(f"💾 Cached tokens for {game_id}:")
-        print(f"🏆 Home team ({home_team}): {home_token_id[:20]}...")
-        print(f"🏟️ Away team ({away_team}): {away_token_id[:20]}...")
-        
+                
         return {
             "home_token_id": home_token_id,
             "away_token_id": away_token_id
@@ -1318,6 +1318,134 @@ async def capture_contract_price_snapshot(game_id: str, trigger: str, home_team:
     except Exception as e:
         print(f"❌ Failed to capture price snapshot: {e}")
         return {"home": 0.55, "away": 0.45}
+
+def generate_save_file_name(username: str, home_team: str, away_team: str, date_str: str = None) -> str:
+    """Generate a standardized save file name."""
+    if not date_str:
+        date_str = datetime.now().strftime("%Y-%m-%d")
+    
+    # Sanitize inputs to avoid file system issues
+    clean_username = "".join(c for c in username if c.isalnum() or c in ('-', '_')).strip()
+    clean_home = "".join(c for c in home_team if c.isalnum()).upper()
+    clean_away = "".join(c for c in away_team if c.isalnum()).upper()
+    
+    return f"{clean_username}_{date_str}_{clean_away}_{clean_home}.json"
+
+def get_save_file_path(filename: str) -> str:
+    """Get the full path for a save file."""
+    save_dir = os.path.join(os.path.dirname(__file__), "save_states")
+    os.makedirs(save_dir, exist_ok=True)
+    return os.path.join(save_dir, filename)
+
+def save_game_state(username: str, game_state: Dict[str, Any]) -> Dict[str, Any]:
+    """Save the current game state to a JSON file."""
+    try:
+        home_team = game_state.get("homeTeam", "HOME")
+        away_team = game_state.get("awayTeam", "AWAY")
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        game_id = f"{home_team}_{away_team}"
+        
+        # Get current balance and contracts
+        balance_data = initialize_game_balance(game_id)
+        
+        # Create save state data
+        save_data = {
+            "username": username,
+            "date": date_str,
+            "timestamp": datetime.now().isoformat(),
+            "teams": {
+                "homeTeam": home_team,
+                "awayTeam": away_team
+            },
+            "gameState": {
+                "homeScore": game_state.get("homeScore", 0),
+                "awayScore": game_state.get("awayScore", 0),
+                "inning": game_state.get("inning", 1),
+                "isTopOfInning": game_state.get("isTopOfInning", True),
+                "outs": game_state.get("outs", 0),
+                "balls": game_state.get("balls", 0),
+                "strikes": game_state.get("strikes", 0),
+                "bases": game_state.get("bases", {"first": False, "second": False, "third": False}),
+                "homeTeam": home_team,
+                "awayTeam": away_team
+            },
+            "balance": {
+                "current_balance": balance_data["balance"],
+                "contracts": balance_data["contracts"],
+                "transaction_history": balance_data["history"]
+            },
+            "version": "1.0"
+        }
+        
+        # Generate filename and save
+        filename = generate_save_file_name(username, home_team, away_team, date_str)
+        file_path = get_save_file_path(filename)
+        
+        with open(file_path, 'w') as f:
+            json.dump(save_data, f, indent=2)
+        
+        print(f"💾 SAVE STATE: {filename}")
+        print(f"   Balance: ${balance_data['balance']:.2f} | {home_team}: {balance_data['contracts']['home']} | {away_team}: {balance_data['contracts']['away']}")
+        
+        return {
+            "success": True,
+            "filename": filename,
+            "file_path": file_path,
+            "save_data": save_data
+        }
+        
+    except Exception as e:
+        print(f"❌ Save state failed: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+def load_game_state(username: str, home_team: str, away_team: str, date_str: str = None) -> Dict[str, Any]:
+    """Load a saved game state from JSON file."""
+    try:
+        if not date_str:
+            date_str = datetime.now().strftime("%Y-%m-%d")
+        
+        filename = generate_save_file_name(username, home_team, away_team, date_str)
+        file_path = get_save_file_path(filename)
+        
+        if not os.path.exists(file_path):
+            return {
+                "success": False,
+                "error": "Save file not found",
+                "filename": filename
+            }
+        
+        with open(file_path, 'r') as f:
+            save_data = json.load(f)
+        
+        # Restore balance and contracts to global state
+        # Match frontend format: awayTeam_homeTeam_date
+        game_id = f"{away_team}_{home_team}_{date_str}"
+        game_balances[game_id] = {
+            "balance": save_data["balance"]["current_balance"],
+            "contracts": save_data["balance"]["contracts"],
+            "history": save_data["balance"]["transaction_history"],
+            "total_invested": sum(t.get("total_cost", 0) for t in save_data["balance"]["transaction_history"] if t.get("total_cost", 0) > 0),
+            "total_profit_loss": 0.0  # Will be calculated when needed
+        }
+        
+        print(f"📂 LOAD STATE: {filename}")
+        print(f"   Balance: ${save_data['balance']['current_balance']:.2f} | {home_team}: {save_data['balance']['contracts']['home']} | {away_team}: {save_data['balance']['contracts']['away']}")
+        
+        return {
+            "success": True,
+            "filename": filename,
+            "save_data": save_data
+        }
+        
+    except Exception as e:
+        print(f"❌ Load state failed: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 def analyze_price_movement(game_id: str, time_window_minutes: int = 5) -> Dict[str, Any]:
     """Analyze recent price movements to detect significant changes."""
@@ -2145,6 +2273,7 @@ async def sync_game_state(request: Dict[str, Any]):
         game_state = request.get("gameState", {})
         play_quality = request.get("playQuality")  # Extract play quality if provided
         action_type = request.get("actionType")    # Track what type of action triggered this
+        username = request.get("username")        # Extract username for save state
         
         # Generate game ID from team names
         home_team = game_state.get("homeTeam", "HOME")
@@ -2190,6 +2319,12 @@ async def sync_game_state(request: Dict[str, Any]):
                         primary_transaction = trading_result["primary_transaction"]
                         print(f"✅ TRADE: {primary_transaction['action']} {primary_transaction['shares']} {primary_transaction['team'].upper()} @ ${primary_transaction['price_per_share']:.3f}")
                         print(f"💰 Cost: ${primary_transaction['total_cost']:.2f}")
+                        
+                        # Auto-save after successful trade if username provided
+                        if username:
+                            save_result = save_game_state(username, game_state)
+                            if not save_result["success"]:
+                                print(f"⚠️ Auto-save failed: {save_result.get('error', 'Unknown error')}")
                     else:
                         print(f"❌ NO TRADE: {trading_result.get('reason', 'Unknown')}")
         
@@ -2210,7 +2345,6 @@ async def sync_game_state(request: Dict[str, Any]):
         today = datetime.now().strftime("%Y-%m-%d")
         if game_id not in cached_tokens or cached_tokens[game_id].get('date') != today:
             try:
-                print(f"🎯 First sync for {game_id} - caching tokens...")
                 await fetch_and_cache_tokens(home_team, away_team, today)
             except Exception as token_error:
                 print(f"⚠️ Token caching failed (continuing anyway): {token_error}")
@@ -2486,6 +2620,93 @@ async def get_quality_thresholds(request: Dict[str, Any]):
         
     except Exception as e:
         print(f"❌ Quality threshold calculation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/save_game_state")
+async def save_game_state_endpoint(request: SaveStateRequest):
+    """
+    Save the current game state for a user.
+    """
+    try:
+        print(f"💾 Saving game state for user: {request.username}")
+        
+        result = save_game_state(request.username, request.gameState)
+        
+        if result["success"]:
+            return {
+                "success": True,
+                "message": "Game state saved successfully",
+                "filename": result["filename"],
+                "username": request.username,
+                "teams": {
+                    "homeTeam": request.gameState.get("homeTeam"),
+                    "awayTeam": request.gameState.get("awayTeam")
+                }
+            }
+        else:
+            raise HTTPException(status_code=500, detail=result["error"])
+            
+    except Exception as e:
+        print(f"❌ Save game state endpoint failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/load_game_state")
+async def load_game_state_endpoint(request: LoadStateRequest):
+    """
+    Load a saved game state for a user.
+    """
+    try:
+        print(f"📂 Loading game state for user: {request.username}")
+        print(f"   Teams: {request.awayTeam} vs {request.homeTeam}")
+        
+        result = load_game_state(request.username, request.homeTeam, request.awayTeam, request.date)
+        
+        if result["success"]:
+            return {
+                "success": True,
+                "message": "Game state loaded successfully",
+                "filename": result["filename"],
+                "gameState": result["save_data"]["gameState"],
+                "teams": result["save_data"]["teams"],
+                "balance": result["save_data"]["balance"],
+                "username": request.username,
+                "date": result["save_data"]["date"]
+            }
+        else:
+            return {
+                "success": False,
+                "message": result["error"],
+                "filename": result.get("filename", ""),
+                "username": request.username
+            }
+            
+    except Exception as e:
+        print(f"❌ Load game state endpoint failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/check_save_exists/{username}/{home_team}/{away_team}")
+async def check_save_exists(username: str, home_team: str, away_team: str, date: str = None):
+    """
+    Check if a save file exists for the given parameters.
+    """
+    try:
+        if not date:
+            date = datetime.now().strftime("%Y-%m-%d")
+        
+        filename = generate_save_file_name(username, home_team, away_team, date)
+        file_path = get_save_file_path(filename)
+        exists = os.path.exists(file_path)
+        
+        return {
+            "exists": exists,
+            "filename": filename,
+            "username": username,
+            "teams": {"homeTeam": home_team, "awayTeam": away_team},
+            "date": date
+        }
+        
+    except Exception as e:
+        print(f"❌ Check save exists failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Load win percentage data on startup

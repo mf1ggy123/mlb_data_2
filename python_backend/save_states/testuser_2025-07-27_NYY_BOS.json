@@ -1,0 +1,42 @@
+{
+  "username": "testuser",
+  "date": "2025-07-27",
+  "timestamp": "2025-07-27T12:12:04.759930",
+  "teams": {
+    "homeTeam": "BOS",
+    "awayTeam": "NYY"
+  },
+  "gameState": {
+    "homeScore": 3,
+    "awayScore": 2,
+    "inning": 5,
+    "isTopOfInning": false,
+    "outs": 1,
+    "balls": 2,
+    "strikes": 1,
+    "bases": {
+      "first": true,
+      "second": false,
+      "third": false
+    }
+  },
+  "balance": {
+    "current_balance": 986.25,
+    "contracts": {
+      "home": 25,
+      "away": 0
+    },
+    "transaction_history": [
+      {
+        "action": "BUY",
+        "team": "home",
+        "shares": 25,
+        "price_per_share": 0.55,
+        "total_cost": 13.75,
+        "reason": "Test transaction",
+        "timestamp": "2025-07-27T12:12:04.759851"
+      }
+    ]
+  },
+  "version": "1.0"
+}

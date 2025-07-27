@@ -33,7 +33,8 @@
       "Bash(timeout:*)",
       "Bash(pip install:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(find:*)"
     ],
     "deny": []
   }

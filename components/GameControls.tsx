@@ -415,7 +415,7 @@ const getBasePathOptionsByQuality = (quality: string, gameState: any): PlayOptio
     .map((outcome, index) => convertOutcomeToOption(outcome, index));
 };
 
-export default function GameControls() {
+export default function GameControls({ username }: { username?: string }) {
   const { gameState, dispatch, canUndo } = useGameState();
   const [showPlayModal, setShowPlayModal] = useState(false);
   const [showStealModal, setShowStealModal] = useState(false);
@@ -460,11 +460,21 @@ export default function GameControls() {
       // Generate gameId for price fetching
       const gameId = `${gameState.homeTeam}_${gameState.awayTeam}`;
       
+      console.log('🔄 Syncing state and fetching prices...', {
+        gameId,
+        username,
+        quality: currentPlayContext.quality,
+        actionType: currentPlayContext.actionType
+      });
+      
       // Sync game state and fetch prices in parallel
       const [syncResult, pricesResult] = await Promise.all([
-        syncGameState(gameState, currentPlayContext.quality, currentPlayContext.actionType),
+        syncGameState(gameState, currentPlayContext.quality, currentPlayContext.actionType, username),
         getCurrentMarketPrices(gameId)
       ]);
+      
+      console.log('📈 Sync result:', syncResult);
+      console.log('💰 Prices result:', pricesResult);
       
       if (pricesResult.success && pricesResult.prices) {
         console.log('💰 Updated market prices:', pricesResult.prices);
@@ -475,7 +485,7 @@ export default function GameControls() {
     };
     
     syncStateAndFetchPrices();
-  }, [gameState, currentPlayContext]);
+  }, [gameState, currentPlayContext, username]);
 
   // All backend communication functions removed
 

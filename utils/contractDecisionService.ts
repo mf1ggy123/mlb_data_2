@@ -55,7 +55,8 @@ interface ContractDecisionResponse {
 export async function syncGameState(
   gameState: GameState, 
   playQuality?: string, 
-  actionType?: string
+  actionType?: string,
+  username?: string
 ): Promise<{
   success: boolean;
   error?: string;
@@ -64,7 +65,8 @@ export async function syncGameState(
     const payload = {
       gameState,
       ...(playQuality && { playQuality }),
-      ...(actionType && { actionType })
+      ...(actionType && { actionType }),
+      ...(username && { username })
     };
 
     console.log('🔄 Syncing game state to backend:', {
